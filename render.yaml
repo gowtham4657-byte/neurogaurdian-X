@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: neuroguardian-x-emergency-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn emergency_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: NGX_DEVICE_TOKEN
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: WHATSAPP_PROVIDER
+        value: cloud
+      - key: WHATSAPP_GRAPH_VERSION
+        value: v23.0
+      - key: WHATSAPP_CLOUD_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_CLOUD_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_CLOUD_WABA_ID
+        sync: false
+      - key: WHATSAPP_CLOUD_TEMPLATE_NAME
+        value: neuroguardian_emergency_alert
+      - key: WHATSAPP_CLOUD_TEMPLATE_LANGUAGE
+        value: en_US
+      - key: WHATSAPP_CLOUD_ALLOW_TEXT
+        value: "false"
+      - key: NTFY_BASE_URL
+        value: https://ntfy.sh
+      - key: NGX_NTFY_TOPIC
+        sync: false

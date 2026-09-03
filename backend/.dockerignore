@@ -1,0 +1,8 @@
+.env
+.venv
+__pycache__
+logs
+*.pyc
+*.pyo
+*.pyd
+check_whatsapp_config.py
