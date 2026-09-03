@@ -34,6 +34,7 @@ In the app SOS settings, set:
 - `WHATSAPP_CLOUD_PHONE_NUMBER_ID`: Meta phone number ID used in the Graph `/messages` endpoint.
 - `WHATSAPP_CLOUD_WABA_ID`: WhatsApp Business Account ID, useful for template management.
 - `WHATSAPP_CLOUD_TEMPLATE_NAME`: approved emergency template name.
+- `WHATSAPP_WEBHOOK_VERIFY_TOKEN`: token Meta uses to verify the webhook callback.
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`: Twilio WhatsApp credentials if using Twilio.
 - `TWILIO_CONTENT_SID`: optional Twilio approved WhatsApp content template SID.
 - `NGX_NTFY_TOPIC`: immediate push fallback topic for the guardian's ntfy app.
@@ -79,6 +80,15 @@ Without an approved template, WhatsApp text messages usually work only inside a
 valid 24-hour customer-service window. Keep `WHATSAPP_CLOUD_ALLOW_TEXT=false`
 for production.
 
+For Meta production webhooks, use:
+
+```text
+Callback URL: https://neurogaurdian-x.onrender.com/whatsapp/webhook
+Verify token: same value as WHATSAPP_WEBHOOK_VERIFY_TOKEN in Render
+```
+
+Then subscribe to WhatsApp message/status fields in the Meta dashboard.
+
 ### Option B: Twilio WhatsApp
 
 Use Twilio Sandbox for testing or an approved WhatsApp sender for production.
@@ -98,6 +108,8 @@ production-initiated alerts, use an approved Twilio content template.
 ## Endpoints
 
 - `GET /health`: confirms server and key presence.
+- `GET /whatsapp/webhook`: verifies the Meta WhatsApp webhook callback.
+- `POST /whatsapp/webhook`: receives WhatsApp delivery status/incoming webhook events.
 - `POST /medical-facilities/nearby`: returns up to three nearby hospitals.
 - `POST /emergency/alert`: sends WhatsApp and push alerts when configured.
 

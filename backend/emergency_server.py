@@ -3,7 +3,8 @@ import os
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -77,6 +78,13 @@ def _places_api_key() -> str:
     return (
         os.getenv("GOOGLE_PLACES_API_KEY", "").strip()
         or os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
+    )
+
+
+def _webhook_verify_token() -> str:
+    return (
+        os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "").strip()
+        or os.getenv("WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN", "").strip()
     )
 
 
@@ -544,6 +552,28 @@ async def health() -> Dict[str, Any]:
             )
         ),
         "ntfy_push": bool(os.getenv("NGX_NTFY_TOPIC", "").strip()),
+        "whatsapp_webhook": bool(_webhook_verify_token()),
+    }
+
+
+@app.get("/whatsapp/webhook", response_class=PlainTextResponse)
+async def verify_whatsapp_webhook(request: Request) -> PlainTextResponse:
+    mode = request.query_params.get("hub.mode", "")
+    token = request.query_params.get("hub.verify_token", "")
+    challenge = request.query_params.get("hub.challenge", "")
+    expected = _webhook_verify_token()
+
+    if mode == "subscribe" and expected and token == expected:
+        return PlainTextResponse(challenge)
+    raise HTTPException(status_code=403, detail="Webhook verification failed")
+
+
+@app.post("/whatsapp/webhook")
+async def receive_whatsapp_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "ok": True,
+        "received": True,
+        "object": payload.get("object"),
     }
 
 

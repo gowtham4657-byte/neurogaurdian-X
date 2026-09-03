@@ -30,10 +30,19 @@ if (!$BackendUrl.StartsWith("https://") -and !$BackendUrl.StartsWith("http://"))
 }
 
 Write-Output "Checking connected Android device..."
-& $adb devices
+$devices = & $adb devices
+$devices | Write-Output
+$connectedDevice = $devices | Where-Object { $_ -match "\tdevice$" } | Select-Object -First 1
+if (!$connectedDevice) {
+  throw "No Android phone is connected. Connect USB debugging, unlock the phone, and allow the computer."
+}
 
 Write-Output "Checking backend health from phone..."
-& $adb shell "curl -sS --connect-timeout 10 $BackendUrl/health" | Write-Output
+$health = & $adb shell "curl -sS --connect-timeout 10 $BackendUrl/health"
+if ($LASTEXITCODE -ne 0 -or $health -notmatch '"ok"\s*:\s*true') {
+  throw "The phone could not reach $BackendUrl/health. Check mobile data/Wi-Fi and the Render service."
+}
+$health | Write-Output
 
 Write-Output "Saving hidden backend settings inside the app..."
 & $adb shell am force-stop com.neuroguardian.neuroguardian_app | Out-Null
@@ -42,5 +51,8 @@ Write-Output "Saving hidden backend settings inside the app..."
   -a com.neuroguardian.neuroguardian_app.SET_EMERGENCY_CONFIG `
   --es backendUrl "$BackendUrl" `
   --es backendToken "$BackendToken" | Write-Output
+if ($LASTEXITCODE -ne 0) {
+  throw "Could not save backend settings inside the Android app."
+}
 
 Write-Output "Done. Phone app now points to $BackendUrl"
