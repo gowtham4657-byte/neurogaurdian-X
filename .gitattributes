@@ -1,0 +1,11 @@
+# Preserve document bytes; newline conversion can invalidate PDF offsets.
+*.pdf binary
+*.docx binary
+*.pptx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+
+# The archived source hashes refer to exact original file bytes.
+research/journal_revision_2026-09-17/** -text whitespace=cr-at-eol
+research/journal_revision_2026-09-17/source_snapshot/** whitespace=cr-at-eol,-blank-at-eof

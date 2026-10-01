@@ -1,0 +1,13 @@
+{
+  "pages": 8,
+  "editable_word": true,
+  "tables": 5,
+  "figures": 4,
+  "equations": 6,
+  "references": 11,
+  "source_hashes_verified": 15,
+  "page_images_inspected": 8,
+  "new_phase_grid_cases": 5400,
+  "capture_oracle_mismatches": 0,
+  "production_sources_modified_by_revision": false
+}

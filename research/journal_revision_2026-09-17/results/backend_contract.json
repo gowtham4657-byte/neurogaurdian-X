@@ -1,0 +1,51 @@
+{
+  "mode": "direct function calls; transport and providers stubbed; no network",
+  "cases": [
+    {
+      "wa_provider_accepted": true,
+      "push_provider_accepted": true,
+      "reported_success": true,
+      "delivery": {
+        "whatsapp": true,
+        "push": true
+      },
+      "facility_count": 3
+    },
+    {
+      "wa_provider_accepted": true,
+      "push_provider_accepted": false,
+      "reported_success": true,
+      "delivery": {
+        "whatsapp": true,
+        "push": false
+      },
+      "facility_count": 3
+    },
+    {
+      "wa_provider_accepted": false,
+      "push_provider_accepted": true,
+      "reported_success": true,
+      "delivery": {
+        "whatsapp": false,
+        "push": true
+      },
+      "facility_count": 3
+    },
+    {
+      "wa_provider_accepted": false,
+      "push_provider_accepted": false,
+      "reported_success": false,
+      "delivery": {
+        "whatsapp": false,
+        "push": false
+      },
+      "facility_count": 3
+    }
+  ],
+  "failed_delivery_webhook_response": {
+    "ok": true,
+    "received": true,
+    "object": "whatsapp_business_account"
+  },
+  "delivery_persistence_present_in_handler": false
+}

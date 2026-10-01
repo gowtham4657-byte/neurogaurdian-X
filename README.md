@@ -1,88 +1,113 @@
-# NeuroGuardian X wearable safety companion
+# NeuroGuardian X
 
-Location: `C:\Users\hp\Downloads\neuro gardian x\neuroguardian_app`
+Flutter companion app, ESP32-S3 BLE firmware, and a Python emergency-notification
+backend for a wearable safety research prototype.
 
-## What's included
-- Flutter app shell with six tabs: Live, Analytics, History, Care, Device, SOS.
-- ESP32 BLE wearable connection screen that scans, lists devices, connects, and subscribes to NeuroGuardian packets.
-- Real-wearable mode by default. Developer demo tools are hidden unless the app is run with `--dart-define=NGX_DEMO_MODE=true`.
-- Riverpod state for live metrics and placeholder risk scores.
-- Local history store (Hive) with a Guardian Alert Feed and raw sample history on the History tab.
-- SOS screen that texts a guardian or hospital/ambulance contact with watch GPS when available, phone GPS fallback, vitals, and a nearby-hospital Google Maps search link.
-- Backend-safe emergency notification hook for WhatsApp and push redundancy. The phone sends one alert payload to your backend; Google Maps, WhatsApp, Twilio, SuperSend, and push secrets stay on the server.
-- First-run safety consent so users understand this is risk detection support, not medical diagnosis.
-- Emergency contacts are saved locally with Hive and reused for manual and automatic SOS.
-- Each wearable owner enters their own guardian WhatsApp number in the SOS tab; the backend uses that user-saved number during automatic WhatsApp alerts.
-- Local safety alerts are created for falls, fall-timer events, auto SOS, high/low heart rate, low SpO2, fever-range temperature, high stress, and low wearable battery.
-- Local detection databases for heart attack risk, oxygen safety, stress response, burnout, thermal safety, fall/no-movement, and watch signal health.
-- Watch signals for MAX30102 heart rate/SpO2, HRV, GSR stress, AD8232 ECG amplitude, MPU6050 motion/fall state, body temperature, and GPS patient location.
-- Fall SOS monitor: a fall signal starts a 30-second unconscious-patient timer; later movement from the watch stops it, otherwise hospital/ambulance SOS opens with patient GPS after 30 seconds.
-- Critical fall monitor: fall plus sudden heart-rate drop opens an immediate hospital/ambulance SOS message with patient GPS.
-- BLE emergency command loop: the app sends `BUZZER_ON` to the wristband during the countdown/SOS and `BUZZER_OFF` when the user taps `I AM OKAY`.
-- Care tab: minor criteria show exercise/home-care suggestions; serious criteria show consult doctor/emergency guidance. Medicine entries are only for doctor-prescribed prescriptions and are saved locally.
-- Care tab now includes sleep and recovery logging with a local sleep score, quality tracking, and sleep tips.
-- Polished public-facing UI with a protection cockpit, trust cards, safety notices, and stronger mobile-friendly components.
+**Development prototype: not clinically validated, not a diagnostic device, and
+not an ambulance dispatch service. Do not rely on it as the sole emergency channel.**
 
-## Public-use safety notes
-- NeuroGuardian X should be presented as a monitoring and risk-detection support tool, not as a diagnosis engine or a replacement for professional care.
-- Most phones open an SMS composer for confirmation; silent automatic emergency SMS and true nearest-hospital dispatch require native platform work, a verified hospital/ambulance directory or backend, explicit permissions, testing, and local legal review.
-- Before any society/community rollout, test fall detection, no-movement cancellation, contact numbers, GPS permissions, battery behavior, BLE reconnection, and false-alert handling with real devices.
-- If symptoms are serious, users should contact a doctor, guardian, hospital, or ambulance instead of relying on home remedies or exercise suggestions.
+## Start here
 
-## How to run
-1) Open the app-style preview:
+- [Current features, known issues and remaining work](docs/CURRENT_STATUS.md)
+- [ESP32-S3 firmware and packet format](firmware/esp32_neuroguardian_ble/README.md)
+- [Backend setup](backend/README.md)
+- [Public-network deployment](backend/DEPLOY_ANY_NETWORK.md)
+- [Security and private configuration](SECURITY.md)
+- [Research archive](research/journal_revision_2026-09-17/REPOSITORY_NOTES.md)
+- [Dataset research roadmap](docs/physionet_model_training_plan.md)
+
+Older reports and wiring drawings in `docs/` are historical. The current status
+and actual board/sensor specifications take precedence over earlier design claims.
+
+## Components
+
+| Component | Technology | Role |
+| --- | --- | --- |
+| Mobile interface | Flutter / Dart | Live measurements, NeuroTwin, history, care, device and SOS screens |
+| State and storage | Riverpod / Hive | Local application state, samples and owner settings |
+| Wearable | Arduino C++ / ESP32-S3 | Sensor interfaces, BLE packets and alert commands |
+| Server | Python / FastAPI | Authenticated alert endpoint and provider integrations |
+| External services | Google Places, configured WhatsApp and push providers | Facility information and guardian notification requests |
+| Research | Python, native C++, Flutter tests | Synthetic software-in-the-loop evaluations |
+
+NeuroTwin uses statistical baselines and rule-based scores, not a trained clinical
+AI model. Quality values and scores are heuristics, not calibrated probabilities.
+Available fields depend on actual sensors and firmware configuration.
+
+## Run the application
+
+Install a compatible Flutter SDK and Android SDK, then from the repository root:
+
+```sh
+flutter pub get
+flutter analyze
+flutter test
+flutter run
 ```
-cd "C:\Users\hp\Downloads\neuro gardian x\neuroguardian_app"
-.\run_neuroguardian_x_app.bat
-```
-2) Or run from Flutter:
-```
-cd "C:\Users\hp\Downloads\neuro gardian x\neuroguardian_app"
-..\flutter_sdk_backup\bin\flutter.bat run -d web-server --web-hostname 127.0.0.1 --web-port 8765
-```
-3) Open Device and scan for an ESP32 named `NeuroGuardianX`.
-4) For developer-only simulator controls:
-```
-..\flutter_sdk_backup\bin\flutter.bat run --dart-define=NGX_DEMO_MODE=true
+
+The locally verified SDK was Flutter 3.19.5 / Dart 3.3.3. Dependency constraints
+are in `pubspec.yaml`; resolved versions are in `pubspec.lock`.
+
+For a UI-only browser preview:
+
+```sh
+flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8765
 ```
 
-## Build outputs
-- Installable web/PWA output: `build\web`
-- Android debug APK output: `build\app\outputs\flutter-apk\app-debug.apk`
-- For Play Store or public APK distribution, replace debug signing with a private release keystore in `android\app\build.gradle.kts`.
+Real BLE, permissions and background behaviour must be tested on the target phone;
+a browser preview is not equivalent to a wearable-connected Android build.
+Developer simulations are opt-in with `--dart-define=NGX_DEMO_MODE=true`.
 
-## Hooking to ESP32
-- Production BLE service UUID: `6e670001-b5a3-f393-e0a9-e50e24dcca9e`
-- Production vitals notify UUID: `6e670002-b5a3-f393-e0a9-e50e24dcca9e`
-- Production command write UUID: `6e670003-b5a3-f393-e0a9-e50e24dcca9e`
-- Legacy BLE service UUID is still supported: `0000ffe0-0000-1000-8000-00805f9b34fb`
-- Starter firmware sketch: `firmware\esp32_neuroguardian_ble\esp32_neuroguardian_ble.ino`
-- Production JSON packet: `{"event":"none","hr":72,"sp":98,"hrv":45,"gsr":30,"tp":36.7,"st":34,"ac":0,"activity":"Resting","flags":2,"mv":1,"bt":87,"ecg":0.64,"lat":0,"lon":0,"gps":0}`
-- Event-only emergency packet also works: `{"event":"fall_detected","mv":0}`.
-- Critical emergency packet: `{"event":"critical_fall","hr":58,"mv":0}`.
-- Commands accepted by firmware: `BUZZER_ON`, `BUZZER_OFF`, `BUZZ`, `BUZZER_PULSE`, `LED_ON`, `LED_OFF`.
-- Preferred binary packet: `0x4E`, `0x47`, `uint8 version`, `uint32 ts`, `uint8 hr`, `uint8 spo2`, `uint8 hrv`, `uint8 gsr`, `uint8 stress`, `int16 temp_c_x100`, `uint8 activity`, `uint8 flags`, `int16 ecg_mv_x1000`, optional `int32 latE7`, `int32 lonE7`, `uint16 gps_accuracy_x10`.
-- Easy CSV packet: `NGX,ts,hr,spo2,hrv,gsr,stress,tempC,activity,flags,ecgMv,lat,lon,gpsAccuracyM`
-- Activity codes: `0 Resting`, `1 Walking`, `2 Running`, `3 Fall detected`, `4 No movement`.
-- Flags: bit `0x01` means fall detected; bit `0x02` means movement detected. A fall starts the 30-second timer. If movement returns before 30 seconds, the timer stops. If no movement continues for 30 seconds, the patient may be unconscious, so hospital/ambulance SOS opens with watch GPS when available, vitals, and a nearby-hospital map link. If heart rate drops by 20 bpm or more after a fall, hospital/ambulance SOS opens immediately with watch GPS when available.
-- BLE support is meant for Android/iOS builds. The local web preview may not support real BLE on every browser/device.
+Build a development APK with `flutter build apk --debug`. Release signing,
+privacy review and physical-device validation are separate tasks. Do not publish
+signing keys or treat a debug APK as a public-release product.
 
-## Emergency backend
-- Backend folder: `backend`
-- Local run guide: `backend\README.md`
-- Server entrypoint: `backend\emergency_server.py`
-- Secret template: `backend\.env.example`
-- App SOS settings should use the backend base URL and device token. Do not put Google Maps or SuperSend production keys directly in the mobile app.
-- Automatic WhatsApp is supported by the backend through official Meta WhatsApp Cloud API or Twilio WhatsApp. Use an approved emergency message template for production-initiated alerts.
+## Backend configuration
 
-## PhysioNet model roadmap
-- Dataset/model plan: `docs\physionet_model_training_plan.md`
-- MIT-BIH and SDDB are for ECG research/training.
-- Wearable Device Dataset and Wearable Exam Stress Dataset are for stress/exercise detection patterns.
-- The current app remains rule-based until a trained model is validated on real NeuroGuardian watch data.
+Follow `backend/README.md`. Copy `backend/.env.example` to a private `.env` file,
+set required server credentials, then install `backend/requirements.txt` and run:
 
-## Next steps
-- Flash the ESP32 sketch, then enable/install the exact sensor libraries for MAX30102/MAX86141, MAX30208, TinyGPSPlus, and any final ECG/GSR modules selected for the watch PCB.
-- Replace `riskScoresProvider` with your AI endpoint or on-device model.
-- Add authenticated cloud backup only if privacy, consent, and security requirements are ready.
-- Run field validation with multiple users and compare watch alerts against real-world outcomes before public launch.
+```sh
+uvicorn emergency_server:app --host 0.0.0.0 --port 8080
+```
+
+Run that command from `backend/`. The health route is `/health`. `render.yaml`
+describes the Render service. Use an HTTPS server URL for remote phone access.
+Health-check success does not verify WhatsApp or push delivery.
+
+The app supports `NGX_BACKEND_URL` configuration and per-owner guardian settings.
+Keep provider credentials on the server; see `SECURITY.md` for the limitations of
+mobile device tokens. Configure provider templates, permissions and guardian
+consent before controlled notification testing.
+
+## Wearable connection
+
+- BLE name: `NeuroGuardianX`
+- Service: `6e670001-b5a3-f393-e0a9-e50e24dcca9e`
+- Notify: `6e670002-b5a3-f393-e0a9-e50e24dcca9e`
+- Command: `6e670003-b5a3-f393-e0a9-e50e24dcca9e`
+
+Packet-v2 fields support raw motion, quality/contact information, vitals and event
+flags. The intended flow starts a 30-second countdown after a suspected fall and
+allows cancellation. Known sampling/cancellation defects are documented in
+`docs/CURRENT_STATUS.md`; uploading this source does not fix those defects.
+
+The sketch uses generic ESP32-S3 DevKit GPIOs, not a verified XIAO wiring map.
+Read the firmware guide and check the exact hardware before connecting or flashing.
+Optional optical/GPS libraries are disabled by default; temperature and pressure
+support is incomplete. Missing sensors must not be interpreted as normal health.
+
+## Notification meaning
+
+A guardian must be configured by the wearable owner. A server/provider acceptance
+response is not proof of delivery or acknowledgment. Google Places returns nearby
+facility information, not a dispatch relationship. SMS may require user confirmation.
+Do not send test emergencies to hospitals or emergency numbers.
+
+## Research status
+
+The included journal revision reports synthetic software tests, not patient trials.
+No PhysioNet dataset was used for training or evaluation in that study. The
+experimental recovery guard is not installed in the wearable. Author placeholders,
+journal-specific formatting and reproducibility improvements remain before submission.
+No IEEE acceptance, certified plagiarism score or clinical accuracy is claimed.

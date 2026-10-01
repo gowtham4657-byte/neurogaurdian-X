@@ -1,0 +1,88 @@
+{
+  "design": "deterministic midpoint phase grid; not a random population sample",
+  "duration_s": 38,
+  "rates_hz": [
+    1,
+    5,
+    10,
+    25,
+    50,
+    100
+  ],
+  "widths_s": [
+    0.08,
+    0.16,
+    0.24
+  ],
+  "peaks_g": [
+    2.8,
+    3.5,
+    4.2
+  ],
+  "phase_points": 100,
+  "n": 5400,
+  "max_cell_error_percentage_points": 0.8888888888888878,
+  "elapsed_host_s": 26.43247550000001,
+  "summary": [
+    {
+      "hz": 1,
+      "n": 900,
+      "captured": 44,
+      "canceled": 44,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 4.888888888888889,
+      "analytic_percent": 5.179259259259258
+    },
+    {
+      "hz": 5,
+      "n": 900,
+      "captured": 232,
+      "canceled": 232,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 25.77777777777778,
+      "analytic_percent": 25.896296296296292
+    },
+    {
+      "hz": 10,
+      "n": 900,
+      "captured": 444,
+      "canceled": 444,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 49.333333333333336,
+      "analytic_percent": 49.57037037037036
+    },
+    {
+      "hz": 25,
+      "n": 900,
+      "captured": 704,
+      "canceled": 704,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 78.22222222222223,
+      "analytic_percent": 78.37037037037035
+    },
+    {
+      "hz": 50,
+      "n": 900,
+      "captured": 832,
+      "canceled": 832,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 92.44444444444444,
+      "analytic_percent": 92.59259259259257
+    },
+    {
+      "hz": 100,
+      "n": 900,
+      "captured": 888,
+      "canceled": 888,
+      "critical": 0,
+      "oracle_mismatches": 0,
+      "observed_percent": 98.66666666666667,
+      "analytic_percent": 98.76543209876542
+    }
+  ]
+}

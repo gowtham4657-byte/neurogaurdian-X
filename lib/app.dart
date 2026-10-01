@@ -15,6 +15,7 @@ import 'features/emergency/sos_screen.dart';
 import 'features/history/history_providers.dart';
 import 'features/history/history_screen.dart';
 import 'features/metrics/metrics_providers.dart';
+import 'features/neurotwin/neurotwin_screen.dart';
 import 'features/safety/safety_consent_screen.dart';
 import 'features/settings/user_settings.dart';
 
@@ -129,19 +130,19 @@ class _Shell extends ConsumerStatefulWidget {
 class _ShellState extends ConsumerState<_Shell> {
   int _index = 0;
 
-  final _screens = const [
-    DashboardScreen(),
-    AnalyticsScreen(),
-    HistoryScreen(),
-    CareScreen(),
-    DeviceScreen(),
-    SosScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     ref.read(historyRecorderProvider);
     ref.read(safetyAlertRecorderProvider);
+    final screens = [
+      const DashboardScreen(),
+      NeuroTwinScreen(onOpenSos: () => setState(() => _index = 6)),
+      const AnalyticsScreen(),
+      const HistoryScreen(),
+      const CareScreen(),
+      const DeviceScreen(),
+      const SosScreen(),
+    ];
     ref.listen<AutoSosState>(autoSosProvider, (previous, next) {
       final remainingChanged =
           previous?.secondsRemaining != next.secondsRemaining;
@@ -162,13 +163,13 @@ class _ShellState extends ConsumerState<_Shell> {
         HapticFeedback.vibrate();
         unawaited(ref.read(bleRepositoryProvider).sendCommand('BUZZER_ON'));
       }
-      if (next.isTriggered && _index != 5) {
-        setState(() => _index = 5);
+      if (next.isTriggered && _index != 6) {
+        setState(() => _index = 6);
       }
     });
 
     return Scaffold(
-      body: _screens[_index],
+      body: screens[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -176,6 +177,10 @@ class _ShellState extends ConsumerState<_Shell> {
           NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
             label: 'Live',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.hub_outlined),
+            label: 'Twin',
           ),
           NavigationDestination(
             icon: Icon(Icons.query_stats_outlined),

@@ -11,6 +11,7 @@ void main() {
     expect(find.text('NeuroGuardian X'), findsOneWidget);
     expect(find.text('No live signal yet'), findsOneWidget);
     expect(find.text('Live'), findsOneWidget);
+    expect(find.text('Twin'), findsOneWidget);
     expect(find.text('Analytics'), findsOneWidget);
     expect(find.text('History'), findsOneWidget);
     expect(find.text('Care'), findsOneWidget);

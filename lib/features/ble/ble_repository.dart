@@ -191,7 +191,7 @@ class BLERepository {
 
     await device.connect(timeout: const Duration(seconds: 12));
     try {
-      await device.requestMtu(185);
+      await device.requestMtu(517);
     } catch (_) {
       // MTU requests are Android-only; safely ignore when unsupported.
     }
@@ -427,6 +427,20 @@ class BLERepository {
     final longitude = parts.length > 11 ? double.tryParse(parts[11]) : null;
     final gpsAccuracy = parts.length > 12 ? double.tryParse(parts[12]) : null;
     final battery = parts.length > 13 ? int.tryParse(parts[13]) : null;
+    final accelX = parts.length > 14 ? double.tryParse(parts[14]) : null;
+    final accelY = parts.length > 15 ? double.tryParse(parts[15]) : null;
+    final accelZ = parts.length > 16 ? double.tryParse(parts[16]) : null;
+    final gyroX = parts.length > 17 ? double.tryParse(parts[17]) : null;
+    final gyroY = parts.length > 18 ? double.tryParse(parts[18]) : null;
+    final gyroZ = parts.length > 19 ? double.tryParse(parts[19]) : null;
+    final pressure = parts.length > 20 ? double.tryParse(parts[20]) : null;
+    final altitude = parts.length > 21 ? double.tryParse(parts[21]) : null;
+    final ppgQuality = parts.length > 22 ? double.tryParse(parts[22]) : null;
+    final ecgQuality = parts.length > 23 ? double.tryParse(parts[23]) : null;
+    final gsrQuality = parts.length > 24 ? double.tryParse(parts[24]) : null;
+    final temperatureQuality =
+        parts.length > 25 ? double.tryParse(parts[25]) : null;
+    final watchFit = parts.length > 26 ? _boolFrom(parts[26]) : null;
     if (heartRate == null || stress == null || temp == null) return null;
 
     final activity = _activityLabel(activityCode);
@@ -443,6 +457,22 @@ class BLERepository {
       longitude: _validGps(latitude, longitude) ? longitude : null,
       gpsAccuracyM: gpsAccuracy,
       batteryPct: _validBattery(battery),
+      packetVersion: 2,
+      accelXG: accelX,
+      accelYG: accelY,
+      accelZG: accelZ,
+      gyroXDps: gyroX,
+      gyroYDps: gyroY,
+      gyroZDps: gyroZ,
+      pressureHpa: pressure,
+      altitudeM: altitude,
+      ppgQuality: _qualityFrom(ppgQuality),
+      ecgQuality: _qualityFrom(ecgQuality),
+      gsrQuality: _qualityFrom(gsrQuality),
+      temperatureQuality: _qualityFrom(temperatureQuality),
+      watchFit: watchFit,
+      skinContact: watchFit,
+      sensorFlags: flags,
       stressLevel: stress.clamp(0, 100).toDouble(),
       temperatureC: temp,
       activity: activity,
@@ -460,7 +490,9 @@ class BLERepository {
       final decoded = json.decode(text);
       if (decoded is! Map) return null;
 
-      final heartRate = _intFrom(decoded['hr'] ?? decoded['heart_rate']);
+      final heartRate = _intFrom(
+        decoded['hr'] ?? decoded['heart_rate'] ?? decoded['heartRate'],
+      );
       final spo2 = _intFrom(decoded['sp'] ?? decoded['spo2']);
       final hrv = _doubleFrom(decoded['hrv']);
       final gsr = _doubleFrom(decoded['gsr'] ?? decoded['gs']);
@@ -471,6 +503,7 @@ class BLERepository {
       final activityCode = _intFrom(decoded['ac'] ?? decoded['activity_code']);
       final flags = _intFrom(decoded['flags'] ?? decoded['fl']) ?? 0;
       final rawEvent = (decoded['event'] ??
+              decoded['e'] ??
               decoded['signal'] ??
               decoded['type'] ??
               decoded['status'] ??
@@ -482,28 +515,73 @@ class BLERepository {
           decoded['ev'] ?? decoded['fall'] ?? decoded['fall_detected'];
       final fallEvent =
           _intFrom(fallEventRaw) ?? (_boolFrom(fallEventRaw) == true ? 1 : 0);
-      final criticalEvent = rawEvent == 'critical_fall' ||
+      final normalizedEvent = _normalizeEvent(rawEvent);
+      final criticalEvent = normalizedEvent == 'critical_fall' ||
           rawEvent == 'critical' ||
           flags & 0x08 != 0 ||
           _boolFrom(decoded['critical']) == true;
-      final eventFallDetected = rawEvent == 'fall_detected' ||
+      final eventFallDetected = normalizedEvent == 'fall_detected' ||
           rawEvent == 'fall' ||
           criticalEvent ||
           fallEvent == 1;
-      final noMovementEvent = rawEvent == 'no_movement' ||
+      final noMovementEvent = normalizedEvent == 'no_movement' ||
           rawEvent == 'stillness' ||
           _boolFrom(decoded['no_movement']) == true;
       final movementOverride = _boolFrom(
         decoded['mv'] ?? decoded['movement'] ?? decoded['movement_detected'],
       );
-      final ecg = _doubleFrom(decoded['ecg'] ?? decoded['ecgMv']);
-      final latitude = _doubleFrom(decoded['lat'] ?? decoded['latitude']);
-      final longitude = _doubleFrom(decoded['lon'] ?? decoded['lng']);
+      final ecg =
+          _doubleFrom(decoded['ecg'] ?? decoded['eg'] ?? decoded['ecgMv']);
+      final latitude =
+          _doubleFrom(decoded['lat'] ?? decoded['la'] ?? decoded['latitude']);
+      final longitude =
+          _doubleFrom(decoded['lon'] ?? decoded['lo'] ?? decoded['lng']);
       final gpsAccuracy = _doubleFrom(
-        decoded['gps'] ?? decoded['gpsAccuracyM'] ?? decoded['accuracy'],
+        decoded['gp'] ??
+            decoded['gps'] ??
+            decoded['gpsAccuracyM'] ??
+            decoded['accuracy'],
       );
       final battery = _intFrom(decoded['bt'] ?? decoded['battery']);
-      final timestamp = _timestampFrom(decoded['ts'] ?? decoded['timestamp']);
+      final timestamp =
+          _timestampFrom(decoded['ts'] ?? decoded['t'] ?? decoded['timestamp']);
+      final packetVersion = _intFrom(
+            decoded['v'] ??
+                decoded['packetVersion'] ??
+                decoded['packet_version'],
+          ) ??
+          1;
+      final accelX =
+          _doubleFrom(decoded['ax'] ?? decoded['accX'] ?? decoded['accelX']);
+      final accelY =
+          _doubleFrom(decoded['ay'] ?? decoded['accY'] ?? decoded['accelY']);
+      final accelZ =
+          _doubleFrom(decoded['az'] ?? decoded['accZ'] ?? decoded['accelZ']);
+      final gyroX = _doubleFrom(decoded['gx'] ?? decoded['gyroX']);
+      final gyroY = _doubleFrom(decoded['gy'] ?? decoded['gyroY']);
+      final gyroZ = _doubleFrom(decoded['gz'] ?? decoded['gyroZ']);
+      final pressure = _doubleFrom(
+          decoded['pr'] ?? decoded['pressure'] ?? decoded['pressureHpa']);
+      final altitude =
+          _doubleFrom(decoded['al'] ?? decoded['alt'] ?? decoded['altitude']);
+      final ppgQuality = _qualityFrom(
+        decoded['pq'] ?? decoded['ppgQuality'] ?? decoded['ppg_quality'],
+      );
+      final ecgQuality = _qualityFrom(
+        decoded['eq'] ?? decoded['ecgQuality'] ?? decoded['ecg_quality'],
+      );
+      final gsrQuality = _qualityFrom(
+        decoded['gq'] ?? decoded['gsrQuality'] ?? decoded['gsr_quality'],
+      );
+      final temperatureQuality = _qualityFrom(
+        decoded['tq'] ??
+            decoded['temperatureQuality'] ??
+            decoded['temperature_quality'],
+      );
+      final skinContact = _boolFrom(
+        decoded['ct'] ?? decoded['skinContact'] ?? decoded['skin_contact'],
+      );
+      final watchFit = _boolFrom(decoded['wf'] ?? decoded['watchFit']);
 
       if ((heartRate == null || stress == null || temp == null) &&
           !eventFallDetected &&
@@ -533,6 +611,22 @@ class BLERepository {
         longitude: _validGps(latitude, longitude) ? longitude : null,
         gpsAccuracyM: gpsAccuracy,
         batteryPct: _validBattery(battery),
+        packetVersion: packetVersion,
+        accelXG: accelX,
+        accelYG: accelY,
+        accelZG: accelZ,
+        gyroXDps: gyroX,
+        gyroYDps: gyroY,
+        gyroZDps: gyroZ,
+        pressureHpa: pressure,
+        altitudeM: altitude,
+        ppgQuality: ppgQuality,
+        ecgQuality: ecgQuality,
+        gsrQuality: gsrQuality,
+        temperatureQuality: temperatureQuality,
+        watchFit: watchFit,
+        skinContact: skinContact,
+        sensorFlags: flags,
         stressLevel: (stress ?? 0).clamp(0, 100).toDouble(),
         temperatureC: temp ?? 0,
         activity: criticalEvent
@@ -586,6 +680,7 @@ class BLERepository {
       longitude: _validGps(latitude, longitude) ? longitude : null,
       gpsAccuracyM: gpsAccuracyM,
       batteryPct: packet.length >= 29 ? _validBattery(data.getUint8(28)) : null,
+      sensorFlags: flags,
       stressLevel: stress,
       temperatureC: tempC,
       activity: activity,
@@ -612,6 +707,33 @@ class BLERepository {
   int? _validBattery(int? battery) {
     if (battery == null || battery < 0 || battery > 100) return null;
     return battery;
+  }
+
+  double? _qualityFrom(Object? value) {
+    final raw = value is num ? value.toDouble() : _doubleFrom(value);
+    if (raw == null) return null;
+    final normalized = raw > 1 ? raw / 100 : raw;
+    return normalized.clamp(0, 1).toDouble();
+  }
+
+  String _normalizeEvent(String raw) {
+    switch (raw) {
+      case 'c':
+      case 'critical':
+      case 'critical_fall':
+        return 'critical_fall';
+      case 'f':
+      case 'fall':
+      case 'fall_detected':
+        return 'fall_detected';
+      case 'm':
+      case 'still':
+      case 'stillness':
+      case 'no_movement':
+        return 'no_movement';
+      default:
+        return raw;
+    }
   }
 
   int? _intFrom(Object? value) {
@@ -680,6 +802,21 @@ class BLERepository {
       activity: activity,
       movementDetected: true,
       batteryPct: 86,
+      packetVersion: 2,
+      accelXG: 0.03,
+      accelYG: -0.02,
+      accelZG: 0.99,
+      gyroXDps: 0.4,
+      gyroYDps: 0.2,
+      gyroZDps: 0.1,
+      pressureHpa: 1008.6,
+      altitudeM: 760,
+      ppgQuality: 0.86,
+      ecgQuality: 0.78,
+      gsrQuality: 0.82,
+      temperatureQuality: 0.74,
+      watchFit: true,
+      skinContact: true,
     );
     _lastDemo = next;
     _controller.add(next);
@@ -725,6 +862,19 @@ class BLERepository {
       fallDetected: fallDetected,
       movementDetected: false,
       batteryPct: previous?.batteryPct ?? 84,
+      packetVersion: 2,
+      accelXG: 2.7,
+      accelYG: 0.4,
+      accelZG: 1.1,
+      gyroXDps: 180,
+      gyroYDps: 82,
+      gyroZDps: 35,
+      ppgQuality: 0.62,
+      ecgQuality: 0.58,
+      gsrQuality: 0.78,
+      temperatureQuality: 0.70,
+      watchFit: true,
+      skinContact: true,
     );
     _lastDemo = next;
     _controller.add(next);
@@ -767,6 +917,19 @@ class BLERepository {
       fallDetected: false,
       movementDetected: true,
       batteryPct: previous?.batteryPct ?? 84,
+      packetVersion: 2,
+      accelXG: 0.42,
+      accelYG: 0.18,
+      accelZG: 0.92,
+      gyroXDps: 18,
+      gyroYDps: 8,
+      gyroZDps: 5,
+      ppgQuality: 0.82,
+      ecgQuality: 0.72,
+      gsrQuality: 0.76,
+      temperatureQuality: 0.75,
+      watchFit: true,
+      skinContact: true,
     );
     _lastDemo = next;
     _controller.add(next);
@@ -786,6 +949,19 @@ class BLERepository {
       fallDetected: false,
       movementDetected: true,
       batteryPct: 84,
+      packetVersion: 2,
+      accelXG: 0.12,
+      accelYG: 0.18,
+      accelZG: 1.02,
+      gyroXDps: 6,
+      gyroYDps: 4,
+      gyroZDps: 3,
+      ppgQuality: 0.76,
+      ecgQuality: 0.70,
+      gsrQuality: 0.80,
+      temperatureQuality: 0.72,
+      watchFit: true,
+      skinContact: true,
     );
     _lastDemo = next;
     _controller.add(next);
@@ -805,6 +981,19 @@ class BLERepository {
       fallDetected: true,
       movementDetected: false,
       batteryPct: 84,
+      packetVersion: 2,
+      accelXG: 2.95,
+      accelYG: 0.55,
+      accelZG: 0.95,
+      gyroXDps: 210,
+      gyroYDps: 96,
+      gyroZDps: 44,
+      ppgQuality: 0.58,
+      ecgQuality: 0.55,
+      gsrQuality: 0.82,
+      temperatureQuality: 0.69,
+      watchFit: true,
+      skinContact: true,
     );
     _lastDemo = next;
     _controller.add(next);
@@ -856,8 +1045,10 @@ class BLERepository {
       case 2:
         return 'Running';
       case 3:
-        return 'Active';
+        return 'Fall detected';
       case 4:
+        return 'No movement';
+      case 5:
         return 'Sleeping';
       default:
         return 'Resting';

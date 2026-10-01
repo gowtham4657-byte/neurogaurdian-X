@@ -1,0 +1,236 @@
+[
+  {
+    "policy": "original_1Hz",
+    "group": "quiet",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_1Hz",
+    "group": "walking",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_1Hz",
+    "group": "impact_immobile",
+    "n": 200,
+    "captured": 14,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_1Hz",
+    "group": "impact_recovery",
+    "n": 200,
+    "captured": 10,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_1Hz",
+    "group": "impact_hr_drop",
+    "n": 200,
+    "captured": 9,
+    "critical": 9,
+    "critical_percent": 4.5,
+    "critical_wilson95": [
+      2.3852543001493,
+      8.32967040018196
+    ],
+    "mean_time_from_peak_s": -0.0030678983435515526
+  },
+  {
+    "policy": "original_1Hz",
+    "group": "unworn_impact",
+    "n": 200,
+    "captured": 8,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "quiet",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "walking",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "impact_immobile",
+    "n": 200,
+    "captured": 199,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "impact_recovery",
+    "n": 200,
+    "captured": 198,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "impact_hr_drop",
+    "n": 200,
+    "captured": 199,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "original_50Hz",
+    "group": "unworn_impact",
+    "n": 200,
+    "captured": 198,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "quiet",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "walking",
+    "n": 200,
+    "captured": 0,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "impact_immobile",
+    "n": 200,
+    "captured": 199,
+    "critical": 199,
+    "critical_percent": 99.5,
+    "critical_wilson95": [
+      97.22262956021069,
+      99.91168312843989
+    ],
+    "mean_time_from_peak_s": 29.984250307000238
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "impact_recovery",
+    "n": 200,
+    "captured": 198,
+    "critical": 0,
+    "critical_percent": 0.0,
+    "critical_wilson95": [
+      1.734723475976807e-16,
+      1.8845326377266574
+    ],
+    "mean_time_from_peak_s": null
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "impact_hr_drop",
+    "n": 200,
+    "captured": 199,
+    "critical": 199,
+    "critical_percent": 99.5,
+    "critical_wilson95": [
+      97.22262956021069,
+      99.91168312843989
+    ],
+    "mean_time_from_peak_s": 29.98183481878986
+  },
+  {
+    "policy": "guarded_50Hz",
+    "group": "unworn_impact",
+    "n": 200,
+    "captured": 198,
+    "critical": 198,
+    "critical_percent": 99.0,
+    "critical_wilson95": [
+      96.42782382838232,
+      99.72533418664555
+    ],
+    "mean_time_from_peak_s": 29.98131654730959
+  }
+]

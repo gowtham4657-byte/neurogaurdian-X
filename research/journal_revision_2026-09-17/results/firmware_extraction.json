@@ -1,0 +1,12 @@
+{
+  "source": "firmware\\esp32_neuroguardian_ble\\esp32_neuroguardian_ble.ino",
+  "source_sha256": "74fbfdb53b931c17f0d2c5498a6700409ddfe1ce28d0143066a59127338bb7a3",
+  "function_sha256": "96e0814daee16a36c0cac35f5e3b9cd82e525a0bdb58ba21654e54284cdc5f21",
+  "extraction": "verbatim function body and constants; Arduino I/O and clock stubbed",
+  "not_emulated": [
+    "BLE stack",
+    "sensor electronics",
+    "ESP32 scheduling",
+    "radio reconnection"
+  ]
+}

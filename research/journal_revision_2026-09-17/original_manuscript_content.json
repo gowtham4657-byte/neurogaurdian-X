@@ -1,0 +1,556 @@
+{
+  "title": "NeuroGuardian X Reproducible Simulation and Failure Analysis of Personalized Wearable Monitoring and Fall Alert Logic",
+  "authors": "[Author names in publication order]",
+  "abstract": "Wearable safety systems combine physiological sensing, motion processing, smartphone software, and remote notification services. A plausible dashboard does not establish that this chain behaves correctly during a fall or communication failure. This paper presents a reproducible software evaluation of NeuroGuardian X, an ESP32-S3 and Flutter prototype with a personal statistical profile called NeuroTwin and a FastAPI notification backend. The study executes the existing Flutter engine on 1,600 synthetic cases, replays 1,200 generated motion traces through three policies, and exercises five mobile-controller cases and five backend contract cases. A verbatim extraction of the firmware motion function captures 14 of 200 short impact-and-immobility traces at 1 Hz, but produces no critical flag because post-impact changes cancel the timer. Raising sampling to 50 Hz increases capture to 199 of 200 without correcting that cancellation. An experimental guarded recovery policy produces critical flags in 199 of 200 immobile-impact traces, but also in 198 of 200 unworn-device impact traces. The Flutter engine labels all 200 missing-signal cases Normal, and its baseline rejects all 200 stationary histories. Backend results distinguish request acceptance from unverified delivery. These findings identify integration defects and a reproducible path for their investigation. They do not establish clinical accuracy, real-world fall sensitivity, or reliable emergency dispatch.",
+  "keywords": "Wearable sensing, fall detection, software-in-the-loop, signal quality, personalized baseline, emergency notification, reproducibility.",
+  "blocks": [
+    {
+      "type": "h1",
+      "text": "I. INTRODUCTION"
+    },
+    {
+      "type": "p",
+      "text": "A wearable safety application must do more than identify a large sensor value. It must preserve an event across transient motion, distinguish unavailable measurements from ordinary measurements, maintain a meaningful personal reference, and communicate what has actually happened to an alert. Errors at these interfaces can remain hidden when development focuses on dashboard appearance or isolated unit tests. The engineering question addressed here is whether an implemented prototype behaves consistently with its stated monitoring and escalation rules under controlled inputs."
+    },
+    {
+      "type": "p",
+      "text": "NeuroGuardian X combines an ESP32-S3 sensor interface, a Bluetooth Low Energy (BLE) connection, a Flutter mobile application, and a Python notification backend. NeuroTwin is the project name for a personal statistical baseline and rule-based explanation engine. In this implementation it is not a mechanistic physiological model, a disease simulator, or a clinically validated digital twin. The current study evaluates software behavior before making claims about measurements obtained from a completed wrist-worn device."
+    },
+    {
+      "type": "p",
+      "text": "The contribution is a traceable evaluation across three implementation boundaries. First, a host harness executes the firmware motion-state function without rewriting its decision branches. Second, synthetic histories are passed to the production Flutter engine and controller. Third, backend endpoint functions are exercised with controlled provider outcomes. An experimental recovery policy is evaluated as a diagnostic comparison, including an intentionally difficult unworn-device case. The work reports negative results explicitly and provides the inputs, generators, source hashes, and numeric outputs needed to reproduce them."
+    },
+    {
+      "type": "p",
+      "text": "The scope is software-in-the-loop testing. Sensor electronics, battery life, skin contact, over-the-air BLE timing, Android background execution, internet transport, and actual guardian response are outside the measured system. No person was asked to fall, no patient recording was processed, and no emergency message was sent during these experiments. All use of the words normal, stress, exercise, and fall in scenario names refers to constructed inputs."
+    },
+    {
+      "type": "h1",
+      "text": "II. RELATED WORK AND EVALUATION SCOPE"
+    },
+    {
+      "type": "p",
+      "text": "SisFall supplies recorded falls and activities of daily living and demonstrates why performance must be examined by activity and population [1]. Its original recordings are sampled at 200 Hz. The present synthetic waveforms are neither taken from SisFall nor a substitute for its recordings. Their short impulses are deliberately chosen to probe sampling and cancellation behavior. Thus, a critical-flag percentage reported here cannot be compared directly with a published fall-classification accuracy."
+    },
+    {
+      "type": "p",
+      "text": "Hongn et al. provide wrist-worn physiological recordings under acute stress and structured exercise [2]. Their work motivates evaluating activity context when interpreting pulse and electrodermal measurements. However, plausible combinations of increased heart rate and electrodermal activity do not create clinically labeled stress examples. In this paper, those combinations probe the software response to a feature shift; there is no trained stress classifier and no measured stress-detection accuracy."
+    },
+    {
+      "type": "p",
+      "text": "The MIT-BIH Arrhythmia Database provides 48 half-hour two-channel ECG records sampled at 360 Hz [3], [4]. It is relevant to a future waveform-based ECG evaluation, whereas the current prototype sends a scalar ECG value in its periodic packet. A scalar amplitude deviation cannot be equated with rhythm classification. The exam-stress dataset [5], Sudden Cardiac Death Holter Database [6], and induced-stress/exercise dataset release [7] are also relevant future resources. None of their records was downloaded, used for fitting, or used for testing in this study. The amount of those datasets used for training is zero."
+    },
+    {
+      "type": "p",
+      "text": "Our research questions are: RQ1, how do the implemented baseline, quality, and score rules respond to missing, stationary, and shifted inputs; RQ2, how do sampling frequency and recovery cancellation interact; and RQ3, what evidence is actually available after a controller trigger or backend success response? The comparison is internal to the prototype, rather than a claim of superiority to commercial watches."
+    },
+    {
+      "type": "h1",
+      "text": "III. SYSTEM ARCHITECTURE AND IMPLEMENTATION"
+    },
+    {
+      "type": "fig",
+      "name": "architecture",
+      "caption": "Fig. 1. Prototype data path. Software boundaries are exercised independently. Arrows do not imply that the complete hardware-to-guardian path was tested."
+    },
+    {
+      "type": "h2",
+      "text": "A. Wearable and packet interface"
+    },
+    {
+      "type": "p",
+      "text": "The inspected firmware uses Arduino C++ on an ESP32-S3. It contains an MPU6050 motion path, analog GSR and ECG inputs, a battery input, an SOS button, and buzzer/vibration control. Optional compile-time paths exist for a MAX30102 optical module and a TinyGPSPlus GNSS receiver; both are disabled in the inspected configuration. Pressure and altitude are placeholders, and a dedicated calibrated temperature measurement path is unfinished. The MAX30102 internal temperature path, when enabled, should not be interpreted as an independently validated body-temperature measurement."
+    },
+    {
+      "type": "p",
+      "text": "Version 2 packets carry compact JSON fields for timestamp, heart rate, oxygen saturation, HRV, GSR, temperature, ECG scalar, motion axes, quality scores, position, battery, and event flags. The BLE maximum transmission unit is requested as 517 bytes, but successful negotiation and packet delivery are not measured here. The firmware calls notifyMetrics at a nominal one-second interval only while deviceConnected is true. Motion acquisition and buildMotionState are inside that function. Consequently, the configured source ties motion-state advancement to the connected notification loop; the nominal rate is an idealization that excludes scheduling jitter and missed intervals."
+    },
+    {
+      "type": "h2",
+      "text": "B. Mobile application and NeuroTwin"
+    },
+    {
+      "type": "p",
+      "text": "The Flutter application parses the packet into a Metrics object. NeuroTwin combines a signal-quality view, an activity-dependent personal baseline, trend summaries, and weighted rule scores. The baseline uses at most 120 eligible preceding samples. An overall profile is marked ready at 20 eligible samples; individual metric readiness uses 12 samples. These sample-count checks are software conventions and do not establish that a stable multi-day physiological baseline has been learned."
+    },
+    {
+      "type": "p",
+      "text": "For metric x with n eligible samples, the baseline mean, sample standard deviation, and current normalized deviation are computed as follows. A metric-specific floor prevents division by a very small standard deviation."
+    },
+    {
+      "type": "eq",
+      "text": "mu = (1/n) sum(x_i); s = sqrt(sum((x_i - mu)^2)/(n - 1))                 (1)",
+      "latex": "\\begin{aligned}\\mu&=\\frac{1}{n}\\sum_{i=1}^{n}x_i,\\\\s&=\\sqrt{\\frac{\\sum_{i=1}^{n}(x_i-\\mu)^2}{n-1}}.\\end{aligned}"
+    },
+    {
+      "type": "eq",
+      "text": "z = (x_current - mu) / max(s, s_min)                                  (2)",
+      "latex": "z=\\frac{x_{\\mathrm{current}}-\\mu}{\\max(s,s_{\\min})}."
+    },
+    {
+      "type": "p",
+      "text": "The standard-deviation floors are 3 beats/min for heart rate, 0.8 percentage points for oxygen saturation, 5 ms for HRV, 4 arbitrary units for GSR, 0.2 degrees C for temperature, and 0.08 mV for the ECG scalar. Eligibility requires acceptable contact, an overall quality of at least 0.45, compatible activity, and some usable physiological input. It also rejects every sample with movementDetected equal to false. That last condition is evaluated directly in the stationary-history experiment."
+    },
+    {
+      "type": "p",
+      "text": "Quality values are provided by the firmware or estimated from value availability and motion. NeuroTwin averages PPG, ECG, GSR, temperature, and motion quality and declares the result reliable when the average is at least 0.55 and watch fit is acceptable. These quality numbers are heuristics, not empirically calibrated probabilities. GPS readiness is handled separately. A high aggregate quality does not validate every individual channel."
+    },
+    {
+      "type": "h2",
+      "text": "C. Composite score and labels"
+    },
+    {
+      "type": "p",
+      "text": "Let S denote the stress score, C the existing cardiac-related rule score, E the ECG-scalar anomaly score, F the motion/fall score, O the oxygen-related load, and T the temperature-related load, each on a 0-100 scale. The current composite is:"
+    },
+    {
+      "type": "eq",
+      "text": "R0 = 0.18S + 0.22C + 0.18E + 0.26F + 0.10O + 0.06T                  (3)",
+      "latex": "R_0=0.18S+0.22C+0.18E+0.26F+0.10O+0.06T."
+    },
+    {
+      "type": "p",
+      "text": "For unreliable quality without a fall, the score is multiplied by 0.72. A fall with no movement sets a minimum score of 82, and the Critical fall activity sets a minimum of 92. A non-fall case without a ready baseline is capped at 72. Labels change at scores of 30, 60, and 80: Normal, Observe, Warning, and Critical Review. Although the application uses probability terminology for some components, this paper calls them scores because no probability calibration has been performed."
+    },
+    {
+      "type": "p",
+      "text": "The stress calculation combines deviations in GSR, HRV, heart rate, and temperature and blends them with recent transmitted stress values. Exercise activity changes that calculation. The ECG component combines scalar-amplitude deviation, baseline deviation, and HRV load. These operations explain why isolated component scores may rise without changing the final label. Trend windows of five minutes, thirty minutes, and one hour are implemented; the short histories in this experiment do not validate those time scales."
+    },
+    {
+      "type": "h2",
+      "text": "D. Alert controller and backend"
+    },
+    {
+      "type": "p",
+      "text": "The mobile controller starts a 30-second countdown following a fall signal. A subsequent non-fall movement packet cancels the countdown. An immediate critical path uses a heart-rate drop of at least 20 beats/min, whereas the firmware constant is 22 beats/min. A Critical fall activity also triggers the mobile critical branch. The timer uses DateTime.now and periodic callbacks; its behavior is therefore tested with actual elapsed time rather than assuming that a test framework virtual clock changes DateTime.now."
+    },
+    {
+      "type": "p",
+      "text": "The backend accepts an alert containing event information, coordinates, guardian settings, and optional medical facilities. If the list is absent, it can query Google Places Nearby Search [8]. Facility discovery returns information about places; it is not a hospital dispatch agreement. WhatsApp and push are separate provider paths. The current response includes success and delivery fields based on provider-call outcomes, while the webhook handler acknowledges receipt without retaining a message-delivery history. The controlled backend tests examine this contract, not a live service."
+    },
+    {
+      "type": "h1",
+      "text": "IV. EXPERIMENTAL METHODS"
+    },
+    {
+      "type": "h2",
+      "text": "A. Provenance and execution boundaries"
+    },
+    {
+      "type": "p",
+      "text": "Experiments were executed on Windows on 17 September 2026 against application version 0.4.0+4, using Flutter 3.19.5 and Dart 3.3.3. The backend environment used Python 3.10.10, FastAPI 0.141.1, and HTTPX 0.28.1. The native harness was compiled with the installed Microsoft C++ toolchain, version family 14.50. Production source files were read but not modified. A manifest records SHA-256 hashes of the inspected files; the working tree contains changes beyond its Git commit, so the file hashes define the evaluated state more precisely than the commit alone."
+    },
+    {
+      "type": "p",
+      "text": "For motion replay, the harness extracts the complete buildMotionState function, its MotionSample structure, and its relevant constants verbatim from the firmware. The host substitutes a controllable millisecond clock, a released SOS button, and inert output functions. The extracted function runs as native C++ with single-precision motion values. This is direct execution of an isolated decision function, not emulation of an ESP32 processor, Arduino scheduler, sensor bus, or BLE stack. Connected operation is assumed in the motion trials."
+    },
+    {
+      "type": "p",
+      "text": "The NeuroTwin experiments import the production Dart classes through the Flutter test runner. The backend experiments import the production endpoint functions, disable dotenv loading, remove provider configuration from the experiment environment, and replace notification and facility providers with local stubs. Network-client construction is blocked. This setup prevents a synthetic event from reaching a real guardian or hospital."
+    },
+    {
+      "type": "h2",
+      "text": "B. NeuroTwin synthetic cases"
+    },
+    {
+      "type": "p",
+      "text": "Five generator seeds, 17, 29, 43, 71, and 101, each produce 40 repetitions per scenario, giving 200 cases per scenario and 1,600 engine evaluations. Every case contains 120 preceding one-second observations and one current observation. The current observation is excluded from its baseline. Except in the stationary scenario, preceding observations represent the ordinary resting input range with movementDetected set to true. This flag choice is intentional: it permits a comparison with stationary resting histories, rather than asserting that those histories were measured from people."
+    },
+    {
+      "type": "table",
+      "caption": "TABLE I. CURRENT SYNTHETIC INPUT RANGES",
+      "head": [
+        "Scenario",
+        "Changed inputs"
+      ],
+      "rows": [
+        [
+          "Normal",
+          "HR 68-76; SpO2 97-99; HRV 45-55; GSR 28-36"
+        ],
+        [
+          "Stationary",
+          "Same ranges; all movement flags false"
+        ],
+        [
+          "Stress shift",
+          "HR 95-115; HRV 15-25; GSR 75-90; stress 75-90"
+        ],
+        [
+          "Exercise",
+          "HR 120-145; HRV 20-35; activity Running"
+        ],
+        [
+          "ECG scalar shift",
+          "ECG 1.6-2.0 mV; other values ordinary"
+        ],
+        [
+          "Poor contact",
+          "Quality 0.05-0.20; fit false; shifted numeric values"
+        ],
+        [
+          "Missing",
+          "HR and temperature zero; optional vitals absent"
+        ],
+        [
+          "Fall inactive",
+          "Fall flag true; movement false; ordinary vitals"
+        ]
+      ],
+      "widths": [
+        1.0,
+        2.5
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Ordinary temperature is sampled uniformly from 36.5 to 36.8 degrees C, ECG scalar from 0.55 to 0.69 mV, transmitted stress from 25 to 35, and supplied channel quality from 0.85 to 0.95. Integer ranges include their stated endpoints; continuous upper limits are excluded by the generator. GSR is an arbitrary 0-100 value rather than calibrated conductance. HRV is an input scalar, not calculated from synthetic beat waveforms. These ranges are engineering test choices and are not normative clinical intervals."
+    },
+    {
+      "type": "p",
+      "text": "The poor-contact case keeps plausible but strongly shifted numbers while setting contact quality low. This separates channel presence from channel trust. The missing case supplies no physiological measurements but preserves an ordinary motion vector. The ECG-scalar case is intentionally not called an arrhythmia or cardiac-arrest case. For each evaluation, the harness stores component scores, final score and category, quality reliability, baseline eligibility, explanations, and input values. Results are summarized using the mean and sample standard deviation, without treating scenario labels as disease ground truth."
+    },
+    {
+      "type": "h2",
+      "text": "C. Motion generator and sampling comparison"
+    },
+    {
+      "type": "p",
+      "text": "The motion experiment uses the same five seeds and 40 repetitions per seed for each of six trace families: quiet, walking, impact followed by immobility, impact followed by recovery, impact with a heart-rate step, and an unworn-device impact. There are 1,200 parameterized traces. Each lasts 45 seconds and is independently replayed at 1 Hz and 50 Hz. For an impact trace, peak time t0 is uniform on [5,6) seconds, width w is uniform on [0.08,0.24) seconds, and peak magnitude A is uniform on [2.8,4.2) g. A low-amplitude sinusoid is added to the 1 g baseline."
+    },
+    {
+      "type": "eq",
+      "text": "a(t) = 1 + 0.004 sin(2 pi 0.7t + phi) + (A - 1) max(0, 1 - 2|t-t0|/w)    (4)",
+      "latex": "\\begin{aligned}a(t)&=1+0.004\\sin(2\\pi\\,0.7t+\\phi)\\\\&\\quad+(A-1)\\max\\!\\left(0,1-\\frac{2|t-t_0|}{w}\\right).\\end{aligned}"
+    },
+    {
+      "type": "p",
+      "text": "The phase phi is uniform on [0,2 pi). Quiet and walking traces omit the impact term. Walking adds a 0.35 g sinusoid at 1.8 Hz; recovery adds the same oscillation eight seconds after the peak. The heart-rate-step trace changes from 75 to 45 beats/min at the start of the impact support. The unworn-device trace intentionally uses the same scalar motion family as the immobile-impact trace, because a magnitude signal alone does not encode whether the device is attached to a person. The generator does not model orientation, skin contact, sensor saturation, or a population distribution of real falls."
+    },
+    {
+      "type": "p",
+      "text": "The production policy starts a countdown when magnitude exceeds 2.6 g. It defines movement as the absolute difference between successive magnitudes exceeding 0.10 g. If the timer is active and movement is detected without a concurrent impact, it cancels the timer. A critical flag follows 30 seconds without cancellation or a qualifying concurrent heart-rate drop. Replay uses the same continuous trace parameters for all policies; it does not optimize separate inputs to favor an alternative."
+    },
+    {
+      "type": "fig",
+      "name": "sampling_failure",
+      "caption": "Fig. 2. Illustrative synthetic counterexample. A sample on the impulse starts the timer, but the next sample near 1 g produces a large magnitude difference and cancels it."
+    },
+    {
+      "type": "h2",
+      "text": "D. Experimental guarded recovery policy"
+    },
+    {
+      "type": "p",
+      "text": "A separate Python policy is evaluated only as an exploratory diagnostic alternative. It samples at 50 Hz, latches the same 2.6 g impact, and retains the same 30-second timeout. It ignores recovery cancellation for the first 1.5 seconds. Thereafter, movement evidence is a peak-to-peak magnitude range greater than 0.18 g over the previous 0.5 seconds. Cancellation requires that evidence to persist for two seconds. The candidate retains an adjacent-sample heart-rate-drop check, allowing its timing weakness to remain visible. It is not installed in the app or firmware."
+    },
+    {
+      "type": "p",
+      "text": "The guarded-policy values are engineering choices for exploring the observed cancellation defect. They were not learned from patient data or selected through a held-out validation procedure. The original policy is replayed at 50 Hz as a sampling-only ablation, separating increased temporal resolution from the changed cancellation rule. Candidate and original code paths use different host languages; the principal endpoint is a discrete state transition, not execution-time speed."
+    },
+    {
+      "type": "h2",
+      "text": "E. Endpoints and controller contracts"
+    },
+    {
+      "type": "p",
+      "text": "For each policy and trace, the harness records whether a fall/countdown flag ever appears, whether the timer is canceled, and the first critical-flag time. This produces 3,600 policy-trace evaluations. Capture and escalation are reported separately. A critical flag is a firmware decision, not a message sent to a guardian. Percentages use 200 trials per family and policy. Wilson 95% intervals quantify binomial uncertainty under the chosen synthetic generator only; they do not quantify uncertainty over real users or environments."
+    },
+    {
+      "type": "p",
+      "text": "Five production-controller cases exercise fall followed by packet silence, movement after five seconds, manual reset, stationary input without a fall, and a Critical fall activity. The no-response cases run concurrently for 32 real seconds; one observed timeout is reported rather than a latency distribution. Four backend cases cover every combination of accepted/rejected WhatsApp and push stubs, and a fifth injects a failed-delivery webhook. No BLE disconnection is physically induced and no Android lock-screen or process-suspension behavior is tested."
+    },
+    {
+      "type": "h1",
+      "text": "V. RESULTS"
+    },
+    {
+      "type": "h2",
+      "text": "A. NeuroTwin score and baseline behavior"
+    },
+    {
+      "type": "table",
+      "caption": "TABLE II. PRODUCTION ENGINE OUTPUTS FOR 200 CASES PER ROW",
+      "head": [
+        "Scenario",
+        "Risk mean (SD)",
+        "Ready / usable"
+      ],
+      "rows": [
+        [
+          "Normal",
+          "6.15 (0.53)",
+          "200 / 200"
+        ],
+        [
+          "Stationary",
+          "16.03 (0.53)",
+          "0 / 200"
+        ],
+        [
+          "Stress shift",
+          "23.69 (1.29)",
+          "200 / 200"
+        ],
+        [
+          "Exercise",
+          "19.80 (1.19)",
+          "0 / 200"
+        ],
+        [
+          "ECG scalar",
+          "16.82 (0.77)",
+          "200 / 200"
+        ],
+        [
+          "Poor contact",
+          "22.07 (1.08)",
+          "200 / 0"
+        ],
+        [
+          "Missing",
+          "0.95 (0.04)",
+          "200 / 0"
+        ],
+        [
+          "Fall inactive",
+          "82.00 (0.00)",
+          "0 / 200"
+        ]
+      ],
+      "widths": [
+        1.1,
+        1.18,
+        1.22
+      ]
+    },
+    {
+      "type": "p",
+      "text": "In Table II, Ready is the number of ready baseline profiles and usable is the number passing the current aggregate-quality rule. All normal histories become ready, whereas no stationary history does. All exercise cases also have an unready baseline because their preceding history is resting and the current context is running. This latter result is expected for a new activity context; the stationary exclusion is more consequential because quiet rest is a legitimate monitoring state. All counts refer to the program rules, not a validated quality reference."
+    },
+    {
+      "type": "fig",
+      "name": "risk_results",
+      "caption": "Fig. 3. Production NeuroTwin risk means with sample-standard-deviation error bars. Dashed lines mark category thresholds at 30, 60, and 80; none is a medically calibrated threshold."
+    },
+    {
+      "type": "p",
+      "text": "Normal and stationary cases have mean scores of 6.15 and 16.03, respectively. The 9.88-point difference follows the stillness contribution to the motion/fall score, although the scenario contains no fall. The stress-shift component rises to 64.29 on average, but the composite remains 23.69. Similarly, the ECG-scalar component averages 69.88, while its composite averages 16.82. All 200 cases in each of these groups retain the Normal category. This is a score-aggregation observation, not evidence that the corresponding synthetic shifts are medically harmless."
+    },
+    {
+      "type": "p",
+      "text": "All 200 poor-contact inputs are marked unreliable, and their ECG component is zero, yet their stress component remains elevated at a mean of 78.26. This occurs because the separate stress-pattern path still consumes numeric values and recent stress history. Reducing the final score is not equivalent to removing untrusted contributions from every explanation. The 200 missing-signal cases all receive the Normal category despite zero usable physiological channels. Their ready profile reflects the preceding good history, not valid current measurements. The appropriate operational interpretation is unavailable current evidence; a categorical Normal display can conceal that distinction."
+    },
+    {
+      "type": "p",
+      "text": "Every fall-inactive input reaches exactly 82 and Critical Review because the explicit minimum dominates the weighted score. This consistency confirms execution of the override. It does not establish that a true fall has been detected, since the experiment supplies the fall flag directly. No disease-classification accuracy, sensitivity, specificity, or receiver-operating-characteristic area is calculated."
+    },
+    {
+      "type": "h2",
+      "text": "B. Impact capture and critical flags"
+    },
+    {
+      "type": "table",
+      "caption": "TABLE III. CAPTURE / CRITICAL COUNTS OUT OF 200",
+      "head": [
+        "Trace family",
+        "Orig. 1 Hz",
+        "Orig. 50 Hz",
+        "Guard 50 Hz"
+      ],
+      "rows": [
+        [
+          "Quiet",
+          "0 / 0",
+          "0 / 0",
+          "0 / 0"
+        ],
+        [
+          "Walking",
+          "0 / 0",
+          "0 / 0",
+          "0 / 0"
+        ],
+        [
+          "Impact immobile",
+          "14 / 0",
+          "199 / 0",
+          "199 / 199"
+        ],
+        [
+          "Impact recovery",
+          "10 / 0",
+          "198 / 0",
+          "198 / 0"
+        ],
+        [
+          "Impact HR drop",
+          "9 / 9",
+          "199 / 0",
+          "199 / 199"
+        ],
+        [
+          "Unworn impact",
+          "8 / 0",
+          "198 / 0",
+          "198 / 198"
+        ]
+      ],
+      "widths": [
+        1.13,
+        0.79,
+        0.79,
+        0.79
+      ]
+    },
+    {
+      "type": "p",
+      "text": "At 1 Hz, the original function captures 14 of 200 immobile-impact traces (7.0%) and generates zero critical flags. At 50 Hz it captures 199 (99.5%) but still generates zero critical flags. The reason is the cancellation branch: as the impulse decays toward 1 g, the inter-sample difference exceeds 0.10 g while the magnitude is below 2.6 g. The timer is therefore canceled by the settling transient. Increased sampling alone does not repair this state-transition rule."
+    },
+    {
+      "type": "fig",
+      "name": "motion_results",
+      "caption": "Fig. 4. Critical-flag rate for each synthetic family and policy. The unworn-impact result is an adverse false-escalation case, not a successful detection."
+    },
+    {
+      "type": "p",
+      "text": "The guarded candidate escalates 199 of 200 immobile-impact traces (99.5%; Wilson interval 97.22-99.91%) and none of the recovery traces (0%; upper Wilson bound 1.88%). However, it also escalates 198 of 200 unworn-device impacts (99.0%; interval 96.43-99.73%). Both the immobile and unworn families share the same observable motion model. The candidate therefore demonstrates timer preservation without demonstrating reliable discrimination of human emergencies. A single aggregate accuracy would obscure this failure."
+    },
+    {
+      "type": "p",
+      "text": "For the heart-rate-step family, the original 1 Hz policy produces nine immediate critical flags. The original 50 Hz policy produces none, although it captures 199 impacts. At the higher rate, the heart-rate step can be observed before magnitude crosses the impact threshold; by the time the countdown starts, the adjacent-sample heart-rate difference is zero. The guarded candidate eventually escalates 199 cases after its countdown, rather than restoring immediate escalation. This result exposes an event-association problem: faster acquisition can reveal timing assumptions that are hidden by coarse sampling. A recent-event buffer would be a separate design change requiring its own evaluation."
+    },
+    {
+      "type": "h2",
+      "text": "C. Controller and backend observations"
+    },
+    {
+      "type": "p",
+      "text": "The production mobile controller triggers after 30.012 seconds in the single fall-then-silence run. Movement at five seconds cancels the countdown, manual reset returns it to Idle, and stationary input without a fall remains Idle. A Critical fall activity triggers immediately and is labeled with the sudden-heart-rate-drop reason even though that case supplies no preceding heart-rate decline. Thus, both stale-input handling and trigger-reason provenance require attention. Continued packet silence is currently treated as no-response continuity, rather than distinguished from sensor disconnection."
+    },
+    {
+      "type": "p",
+      "text": "The backend returns success when either provider stub accepts, and false when both reject. Three synthetic medical facilities appear in each response. This confirms the programmed Boolean aggregation and facility-list path. The failed-delivery webhook is acknowledged with an ok/received response, but the handler maintains no delivery record or alert-state transition. Provider acceptance, handset delivery, and human acknowledgment are therefore separate claims; only the first is represented by these tested return values."
+    },
+    {
+      "type": "h1",
+      "text": "VI. DISCUSSION AND DESIGN IMPLICATIONS"
+    },
+    {
+      "type": "p",
+      "text": "The experiments show why a safety pipeline should be evaluated at its interfaces. A realistic-looking impact flag, a component score labeled as probability, and a successful backend response each describe a narrower event than the user may infer. In the present prototype, a firmware transient cancels a countdown, missing data maps to Normal, and delivery-like fields describe provider acceptance. These observations are reproducible engineering defects or ambiguities, not statistical proof of clinical failure rates."
+    },
+    {
+      "type": "p",
+      "text": "The first design implication is to decouple motion acquisition and local event persistence from the connected BLE notification loop. The firmware should retain a bounded event record and expose timestamped states across reconnection. The guarded experiment supports investigating recovery evidence over a time window, but its unworn-impact false escalations show that contact and wearer-state evidence must also be studied. A brief acceleration change alone cannot establish recovery, and prolonged absence of movement alone cannot establish unconsciousness."
+    },
+    {
+      "type": "p",
+      "text": "The second implication is to make unavailable evidence a first-class output. Quality should gate each contributing channel before scoring, and the final display should distinguish an ordinary supported result from insufficient data. A valid historical baseline must not imply that a missing current reading is valid. Baseline adaptation also requires separate treatment of stationary rest, sleep, exercise, and recovery. The sample-count rules in the current implementation should be replaced or supplemented by duration, coverage, and within-context stability checks evaluated on longitudinal recordings."
+    },
+    {
+      "type": "p",
+      "text": "The third implication is to model emergency communication as explicit states: created, locally queued, backend accepted, provider accepted, delivered, acknowledged, and resolved or failed. An event identifier and timestamped status history would allow retries and guardian acknowledgment to refer to the same incident. Webhook authentication and persistent status handling are prerequisites for trusting external status updates. These recommendations arise from the inspected contract; they have not been implemented or benchmarked in this study."
+    },
+    {
+      "type": "p",
+      "text": "Finally, the ECG and stress outputs require a defined measurement and validation pathway. A single periodic ADC-derived ECG scalar cannot support waveform morphology analysis. The GSR scale is not calibrated conductance, and supplied HRV is not equivalent to a quality-controlled interval series. A future measurement study must specify sensor placement, reference equipment, sampling rates, filtering, artifact handling, and inclusion criteria before drawing conclusions about physiology. NeuroTwin is currently most defensible as an interpretable software profile whose assumptions remain visible."
+    },
+    {
+      "type": "h1",
+      "text": "VII. LIMITATIONS AND VALIDATION PLAN"
+    },
+    {
+      "type": "p",
+      "text": "Synthetic distributions were chosen by the experiment designer and are intentionally simple. They contain no real fall biomechanics, skin-tone variation, age distribution, pathology, or device-position variation. The same seed structure also supports paired comparisons rather than independent clinical cohorts. The guarded policy was introduced during exploratory debugging; there is no held-out policy-selection set. Its high immobile-impact escalation rate is conditioned on the generator and must not be advertised as fall-detection accuracy."
+    },
+    {
+      "type": "p",
+      "text": "The native test bypasses sensors and radio communication. The Flutter tests bypass BLE parsing and background operating-system restrictions. Backend tests bypass HTTP transport and real provider behavior. The experiments therefore do not constitute an end-to-end validation of a functioning wristband. No battery, memory, energy, notification-delivery probability, GPS accuracy, or ambulance response time is measured. The one controller duration measures a desktop software callback under one execution environment and should not be generalized to a locked Android phone."
+    },
+    {
+      "type": "p",
+      "text": "External validation should proceed in stages. First, deterministic regression tests should cover the demonstrated counterexamples, stale packets, timestamp order, and missing channels. Second, instrumented bench measurements should establish acquisition timing, signal integrity, packet handling, contact changes, and power use with the selected sensors. Third, ethically reviewed human studies should compare measurements with appropriate references and evaluate ordinary activity before controlled fall-related testing. Any prospective field trial must define consent, monitoring responsibility, stopping rules, and independent event adjudication."
+    },
+    {
+      "type": "p",
+      "text": "For future dataset modeling, participant-level separation is needed to prevent the same person or overlapping windows appearing in training and evaluation sets. Normalization and feature selection must be fitted using training partitions only. MIT-BIH can support an ECG-specific benchmark after waveform acquisition is implemented; wearable stress resources can support context-dependent research after channel harmonization. These datasets describe different tasks and populations and should not be concatenated into a single unspecified disease label. Calibration and external validation are needed before using probability terminology or offering condition-specific conclusions."
+    },
+    {
+      "type": "h1",
+      "text": "VIII. CONCLUSION"
+    },
+    {
+      "type": "p",
+      "text": "This study provides a reproducible software evaluation of NeuroGuardian X using actual prototype decision code, controlled synthetic inputs, and isolated notification contracts. The results identify sampling-related impact misses, timer cancellation by post-impact settling, event-timing sensitivity in the heart-rate-drop branch, exclusion of stationary baseline samples, and misleading Normal labels under missing input. An exploratory recovery guard preserves the timeout for most constructed immobile impacts but also escalates nearly all unworn-device impacts. The work therefore contributes testable failure cases and a bounded comparison rather than a clinically validated detector. Completing the measurement pipeline and evaluating these cases on real hardware are necessary next steps before claims about user safety or medical performance."
+    },
+    {
+      "type": "h1",
+      "text": "DATA AND CODE AVAILABILITY"
+    },
+    {
+      "type": "p",
+      "text": "The accompanying reproducibility package contains the synthetic generators, native extraction harness, Flutter experiment file, offline backend test, trial-level CSV/JSON results, summary tables, editable manuscript sources, and figure PDFs. A SHA-256 manifest identifies the evaluated source files. No participant data, access tokens, guardian contact information, or production environment files are included. The package accompanies this manuscript locally; no public archival DOI is claimed. Authors should deposit an approved, licensed version in a persistent repository before submission."
+    },
+    {
+      "type": "h1",
+      "text": "ETHICS STATEMENT"
+    },
+    {
+      "type": "p",
+      "text": "This work used generated values and isolated software execution only. No human participants were recruited, no identifiable patient recordings were processed, and no clinical intervention was performed; therefore no human-subject approval was sought for these simulations."
+    },
+    {
+      "type": "h1",
+      "text": "ACKNOWLEDGMENT"
+    },
+    {
+      "type": "p",
+      "text": "OpenAI Codex using GPT-6 assisted in drafting Sections I-VIII and the declarations, creating the experiment and document-generation code, and generating the plots from executable results. The numerical findings originate from the accompanying experiment outputs rather than invented patient observations. The named authors remain responsible for verifying the code, sources, interpretation, and final manuscript before submission."
+    },
+    {
+      "type": "h1",
+      "text": "REFERENCES"
+    },
+    {
+      "type": "ref",
+      "text": "[1] A. Sucerquia, J. D. Lopez, and J. F. Vargas-Bonilla, \"SisFall: A fall and movement dataset,\" Sensors, vol. 17, no. 1, Art. no. 198, 2017, doi: 10.3390/s17010198.",
+      "url": "https://doi.org/10.3390/s17010198"
+    },
+    {
+      "type": "ref",
+      "text": "[2] A. Hongn, F. Bosch, L. E. Prado, J. M. Ferrandez, and M. P. Bonomini, \"Wearable physiological signals under acute stress and exercise conditions,\" Scientific Data, vol. 12, Art. no. 520, 2025, doi: 10.1038/s41597-025-04845-9.",
+      "url": "https://doi.org/10.1038/s41597-025-04845-9"
+    },
+    {
+      "type": "ref",
+      "text": "[3] G. B. Moody and R. G. Mark, \"The impact of the MIT-BIH Arrhythmia Database,\" IEEE Engineering in Medicine and Biology Magazine, vol. 20, no. 3, pp. 45-50, 2001, doi: 10.1109/51.932724.",
+      "url": "https://doi.org/10.1109/51.932724"
+    },
+    {
+      "type": "ref",
+      "text": "[4] G. Moody and R. Mark, \"MIT-BIH Arrhythmia Database,\" PhysioNet, version 1.0.0, 2005. Accessed: Sep. 17, 2026. [Online]. Available: https://physionet.org/content/mitdb/1.0.0/",
+      "url": "https://physionet.org/content/mitdb/1.0.0/"
+    },
+    {
+      "type": "ref",
+      "text": "[5] M. R. Amin, D. Wickramasuriya, and R. T. Faghih, \"A wearable exam stress dataset for predicting cognitive performance in real-world settings,\" PhysioNet, version 1.0.0, 2022, doi: 10.13026/kvkb-aj90.",
+      "url": "https://doi.org/10.13026/kvkb-aj90"
+    },
+    {
+      "type": "ref",
+      "text": "[6] PhysioNet, \"Sudden Cardiac Death Holter Database,\" version 1.0.0. Accessed: Sep. 17, 2026. [Online]. Available: https://physionet.org/content/sddb/1.0.0/",
+      "url": "https://physionet.org/content/sddb/1.0.0/"
+    },
+    {
+      "type": "ref",
+      "text": "[7] A. Hongn, F. Bosch, L. Prado, and P. Bonomini, \"Wearable device dataset from induced stress and structured exercise sessions,\" PhysioNet, version 1.0.1, 2025, doi: 10.13026/he0v-tf17.",
+      "url": "https://doi.org/10.13026/he0v-tf17"
+    },
+    {
+      "type": "ref",
+      "text": "[8] Google, \"Nearby Search (New),\" Google Maps Platform documentation. Accessed: Sep. 17, 2026. [Online]. Available: https://developers.google.com/maps/documentation/places/web-service/nearby-search",
+      "url": "https://developers.google.com/maps/documentation/places/web-service/nearby-search"
+    }
+  ]
+}

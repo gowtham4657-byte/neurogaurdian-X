@@ -1,0 +1,82 @@
+{
+  "normal": {
+    "n": 200,
+    "risk_mean": 6.150581730174959,
+    "risk_sd": 0.5254175829326666,
+    "stress_mean": 9.987611099408518,
+    "ecg_mean": 11.36,
+    "quality_mean": 0.8938039491176888,
+    "baseline_ready": 200,
+    "quality_reliable": 200
+  },
+  "stationary": {
+    "n": 200,
+    "risk_mean": 16.03058173017496,
+    "risk_sd": 0.5254175829326667,
+    "stress_mean": 9.987611099408518,
+    "ecg_mean": 11.36,
+    "quality_mean": 0.8938039491176888,
+    "baseline_ready": 0,
+    "quality_reliable": 200
+  },
+  "stress_shift": {
+    "n": 200,
+    "risk_mean": 23.692903387484588,
+    "risk_sd": 1.2914368203496587,
+    "stress_mean": 64.29081637539352,
+    "ecg_mean": 21.060689657313016,
+    "quality_mean": 0.8938039491176888,
+    "baseline_ready": 200,
+    "quality_reliable": 200
+  },
+  "exercise": {
+    "n": 200,
+    "risk_mean": 19.799064395250767,
+    "risk_sd": 1.1870558951154861,
+    "stress_mean": 40.75449137583376,
+    "ecg_mean": 8.311034485969527,
+    "quality_mean": 0.8938039491176888,
+    "baseline_ready": 0,
+    "quality_reliable": 200
+  },
+  "ecg_scalar_shift": {
+    "n": 200,
+    "risk_mean": 16.821244329253606,
+    "risk_sd": 0.7718993028397761,
+    "stress_mean": 9.987611099408518,
+    "ecg_mean": 69.88422235343627,
+    "quality_mean": 0.8938039491176888,
+    "baseline_ready": 200,
+    "quality_reliable": 200
+  },
+  "poor_contact": {
+    "n": 200,
+    "risk_mean": 22.06919230695202,
+    "risk_sd": 1.075754795603649,
+    "stress_mean": 78.25919989932115,
+    "ecg_mean": 0.0,
+    "quality_mean": 0.27148000138932515,
+    "baseline_ready": 200,
+    "quality_reliable": 0
+  },
+  "missing": {
+    "n": 200,
+    "risk_mean": 0.9489256404689862,
+    "risk_sd": 0.03595086709059743,
+    "stress_mean": 7.321957102384154,
+    "ecg_mean": 0.0,
+    "quality_mean": 0.172,
+    "baseline_ready": 200,
+    "quality_reliable": 0
+  },
+  "fall_inactive": {
+    "n": 200,
+    "risk_mean": 82.0,
+    "risk_sd": 0.0,
+    "stress_mean": 9.98317649543825,
+    "ecg_mean": 3.36,
+    "quality_mean": 0.8658039491176888,
+    "baseline_ready": 0,
+    "quality_reliable": 200
+  }
+}

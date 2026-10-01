@@ -1,0 +1,80 @@
+{
+  "snapshot_date": "2026-09-17",
+  "app_version": "0.4.0+4",
+  "git_base_commit": "7215f020a354033096998de0c285f8ba2eacaab5",
+  "working_tree_modified": true,
+  "files": [
+    {
+      "path": "pubspec.yaml",
+      "sha256": "f3bee612170e03017e6bae74fb7b29ac10e2de453b6729cfa8f6e3a9d4146fe4"
+    },
+    {
+      "path": "pubspec.lock",
+      "sha256": "045b8670f80fa02e385d626f6480615522c6152a77bc8564dc6e3f2b31b72e20"
+    },
+    {
+      "path": "firmware/esp32_neuroguardian_ble/esp32_neuroguardian_ble.ino",
+      "sha256": "74fbfdb53b931c17f0d2c5498a6700409ddfe1ce28d0143066a59127338bb7a3"
+    },
+    {
+      "path": "lib/features/metrics/metrics.dart",
+      "sha256": "74823938b66865c9ee301b09eb425f78ebfc8c86f3bf886bd6298160947ec8b7"
+    },
+    {
+      "path": "lib/features/metrics/metrics_providers.dart",
+      "sha256": "f56d71225b43ba7b306b409602f03d9abca96b112a22ed6a5b47db3b584d9fbc"
+    },
+    {
+      "path": "lib/features/metrics/stress_analysis.dart",
+      "sha256": "090c66d9239fbcc36302c31274935e4faef6476dba0d232d7f3288695775f2e3"
+    },
+    {
+      "path": "lib/features/emergency/auto_sos_provider.dart",
+      "sha256": "175e2244ad9df39a423b29e01f3b7668493ba3a63298accd579016feb329a182"
+    },
+    {
+      "path": "backend/emergency_server.py",
+      "sha256": "ff31a693fb32a0933642c164de6f98a97e186beebba79c6683d62670d3a9c7a3"
+    },
+    {
+      "path": "lib/features/neurotwin/baseline_manager.dart",
+      "sha256": "c0130cf79a6c39746aea47818dae3eebfe48b322636187291049aaf23ebb4144"
+    },
+    {
+      "path": "lib/features/neurotwin/neurotwin_engine.dart",
+      "sha256": "42318973e8844400ffef4656526f4ea4b5407344faafe1b4983dea0709cef0b3"
+    },
+    {
+      "path": "lib/features/neurotwin/neurotwin_models.dart",
+      "sha256": "81c8bc79b4cd9a55ebf9fee978ddb94b714b7006d30d41707ed966cc709cbbc0"
+    },
+    {
+      "path": "lib/features/neurotwin/neurotwin_providers.dart",
+      "sha256": "c11a305e22279f2cf3cb0895ca2b5ebb45d4146e6e30a8024d77ec5653a4d35f"
+    },
+    {
+      "path": "lib/features/neurotwin/neurotwin_screen.dart",
+      "sha256": "28868285e49bef84504a0a8d76a1636b32045c763621e8c3ba33f19273080a25"
+    },
+    {
+      "path": "lib/features/neurotwin/signal_quality_manager.dart",
+      "sha256": "25185c4a3413c6c10af2dc3abbd16bc73632678fb397d27efcbfb18160b60477"
+    },
+    {
+      "path": "lib/features/neurotwin/trend_analyzer.dart",
+      "sha256": "2d8349149755d904e9728adb90387a9eb857d892fb6aaa5f1d7ce4c3bd7f6c5c"
+    }
+  ],
+  "python_artifact_runtime": "3.12.14",
+  "training_records": 0,
+  "patient_records": 0,
+  "engine_evaluations": 1600,
+  "motion_traces": 1200,
+  "motion_policy_evaluations": 3600,
+  "controller_cases": 5,
+  "backend_cases": 5,
+  "phase_grid_native_evaluations": 5400,
+  "phase_grid_design": "six sampling rates, three widths, three peaks, 100 deterministic midpoint phases",
+  "total_motion_executions_including_phase_grid": 9000,
+  "experimental_guard_deployed": false
+}

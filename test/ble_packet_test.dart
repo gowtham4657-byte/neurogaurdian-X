@@ -63,6 +63,29 @@ void main() {
     expect(metrics?.latitude, closeTo(28.6139, 0.00001));
   });
 
+  test('parses v2 NeuroTwin quality and raw motion packet', () {
+    final repo = BLERepository();
+    addTearDown(repo.dispose);
+
+    const packet = '{"v":2,"e":"n","ts":120,"hr":78,"sp":98,"hrv":46,'
+        '"gs":31,"tp":36.6,"st":32,"ac":0,"fl":2,"mv":1,"bt":88,'
+        '"eg":0.64,"la":28.6139,"lo":77.209,"gp":8.5,'
+        '"ax":0.02,"ay":-0.01,"az":0.99,"gx":0.4,"gy":0.2,"gz":0.1,'
+        '"pr":1008.6,"al":760,"pq":0.91,"eq":0.86,"gq":0.82,'
+        '"tq":0.77,"ct":1}';
+    final metrics = repo.parseEsp32Packet(packet.codeUnits);
+
+    expect(metrics?.packetVersion, 2);
+    expect(metrics?.accelZG, closeTo(0.99, 0.001));
+    expect(metrics?.gyroXDps, closeTo(0.4, 0.001));
+    expect(metrics?.pressureHpa, closeTo(1008.6, 0.001));
+    expect(metrics?.altitudeM, closeTo(760, 0.001));
+    expect(metrics?.ppgQuality, closeTo(0.91, 0.001));
+    expect(metrics?.ecgQuality, closeTo(0.86, 0.001));
+    expect(metrics?.gsrQuality, closeTo(0.82, 0.001));
+    expect(metrics?.skinContact, isTrue);
+  });
+
   test('parses event-only fall_detected BLE signal', () {
     final repo = BLERepository();
     addTearDown(repo.dispose);

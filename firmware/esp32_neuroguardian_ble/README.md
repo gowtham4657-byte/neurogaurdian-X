@@ -1,5 +1,12 @@
 # NeuroGuardian X ESP32-S3 Firmware
 
+> Development prototype. The GPIO table below is for generic DevKit defaults,
+> not a verified XIAO ESP32-S3 wiring plan. The safety behaviour describes intent;
+> known sampling and timer-cancellation defects remain in the archived study.
+> See [current status](../../docs/CURRENT_STATUS.md) before hardware testing.
+> Sensor fields do not imply completed or medically validated measurements, and
+> an SOS flow is not verified hospital/ambulance dispatch.
+
 This sketch turns an ESP32-S3 board into a NeuroGuardian X wearable. It advertises
 as `NeuroGuardianX`, streams vitals over BLE, receives app commands, and reports
 fall/no-movement state for the 30-second SOS timer.
@@ -91,3 +98,46 @@ The firmware default is real mode (`USE_SIMULATED_SENSORS 0`). MPU6050, GSR,
 ECG, battery, button, buzzer, LED, optional MAX30102, and optional TinyGPSPlus
 GPS paths are wired in. Body temperature and HRV still need the exact final
 sensor/library selection and calibration for your watch PCB.
+
+## NeuroTwin Packet V2
+
+The firmware now sends packet version `2` with raw motion and quality fields for
+the real-user NeuroTwin screen:
+
+```json
+{
+  "v": 2,
+  "e": "n",
+  "hr": 72,
+  "sp": 98,
+  "hrv": 45,
+  "gs": 30,
+  "tp": 36.7,
+  "st": 34,
+  "ac": 0,
+  "fl": 2,
+  "mv": 1,
+  "bt": 87,
+  "eg": 0.64,
+  "la": 0,
+  "lo": 0,
+  "gp": 0,
+  "ax": 0.01,
+  "ay": 0.02,
+  "az": 0.98,
+  "gx": 0.1,
+  "gy": 0.2,
+  "gz": 0.1,
+  "pr": 1008.6,
+  "al": 760,
+  "pq": 0.9,
+  "eq": 0.86,
+  "gq": 0.82,
+  "tq": 0.78,
+  "ct": 1
+}
+```
+
+Short field names keep BLE packets small. The app still supports older packet
+formats. `e` values are `n` for normal, `f` for fall, and `c` for critical fall.
+Quality values are 0-1, where higher means more trustworthy signal contact.
